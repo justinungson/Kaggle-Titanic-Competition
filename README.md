@@ -1,4 +1,4 @@
-Kaggle-Titanic-Competition
+Kaggle Titanic Competition
 ============================================
 
 From the competition [homepage](http://www.kaggle.com/c/titanic-gettingStarted):
