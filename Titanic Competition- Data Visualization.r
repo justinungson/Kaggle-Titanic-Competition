@@ -17,17 +17,17 @@ test.date.downloaded <- date()
 list.files("./Kaggle Titanic Data")
 
 train.data <- read.csv("./Kaggle Titanic Data/train.csv", header = TRUE, 
-                       stringsAsFactors = FALSE)
+                       stringsAsFactors = FALSE, na.strings = c("", "NA"))
 
 test.data <- read.csv("./Kaggle Titanic Data/test.csv", header = TRUE, 
-                      stringsAsFactors = FALSE)
+                      stringsAsFactors = FALSE, na.strings = c("", "NA"))
 
 ## Load the Amelia Package for visualizing missing data ##
 library(Amelia)
 missmap(train.data, main = "Missing Data from the Titanic Training Dataset",
         col = c("orange", "black"), legend = FALSE)
 
-## Exploratory Data Analysis ##
+## Exploratory Data Analysis ##s
 library(ggplot2)
 
 train.data$Survived <- factor(train.data$Survived, levels = c(0,1), 
@@ -35,6 +35,9 @@ train.data$Survived <- factor(train.data$Survived, levels = c(0,1),
 
 train.data$Sex <- factor(train.data$Sex, levels = c("male", "female"), 
                          labels = c("male", "female"))
+
+train.data$Embarked <- factor(train.data$Embarked, levels = c("S", "C", "Q"), 
+                              labels = c("Southampton", "Cherbourg", "Queenstown"))
 
 qplot(Survived, data = train.data, binwidth = 0.5)
 qplot(Sex, data = train.data, binwidth = 0.5)
