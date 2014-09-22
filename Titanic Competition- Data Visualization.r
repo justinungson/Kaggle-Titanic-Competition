@@ -19,15 +19,12 @@ test.date.downloaded <- date()
 
 list.files("./Kaggle Titanic Data")
 
-train.data <- read.csv("./Kaggle Titanic Data/train.csv", header = TRUE, 
-                       stringsAsFactors = FALSE, na.strings = c("", "NA"))
+train.data <- read.csv("./Kaggle Titanic Data/train.csv", header = TRUE, stringsAsFactors = FALSE, na.strings = c("", "NA"))
 
-test.data <- read.csv("./Kaggle Titanic Data/test.csv", header = TRUE, 
-                      stringsAsFactors = FALSE, na.strings = c("", "NA"))
+test.data <- read.csv("./Kaggle Titanic Data/test.csv", header = TRUE, stringsAsFactors = FALSE, na.strings = c("", "NA"))
 
 ## Load the Amelia Package for visualizing missing data ##
-missmap(train.data, main = "Missing Data from the Titanic Training Dataset",
-        col = c("orange", "black"), legend = FALSE)
+missmap(train.data, main = "Missing Data from the Titanic Training Dataset", col = c("orange", "black"), legend = FALSE)
 
 ## First we must convert the character variables into factor variables so that we can fit our model.
 train.data$Survived <- factor(train.data$Survived)
@@ -70,41 +67,64 @@ train.data$Age <- impute.median.age(train.data$Age, train.data$Title, train.data
 
 train.data$Embarked[which(is.na(train.data$Embarked))] <- "Southampton"
 
-## Create child, mother, and family variables ##
-train.data["Child"]
-for(i in 1:nrow(train.data)) {
-  if(train.data$Age[i] <= 12) {
-    train.data$Child = 1
+## Perform some basic exploratory analysis to get a better feel for the data and how to best model the predictions
+
+table(train.data$Survived, train.data$Sex)
+qplot(Survived, data = train.data) + facet_wrap(~ Sex)
+prop.table(table(train.data$Survived, train.data$Sex), 2)
+
+plot(density(train.data$Age))
+
+table(train.data$Survived, train.data$Pclass)
+qplot(Survived, data = train.data) + facet_wrap(~ Pclass)
+prop.table(table(train.data$Survived, train.data$Pclass), 2)
+
+## From the basic exploratory analysis, we can see that most passengers died. Sex was the biggest single predictor of survival with 
+## 75% of women survivng while only 19% of men survived. There also seemed to be a weak correlation between passenger class (Pclass)
+## and survival. Create child, mother, and family variables. From anecdotal evidence of the era, we can infer that women and children,
+## particularly mothers and their children, are the most likely to have survived. 
+
+train.data["Child"] <- NA
+for (i in 1:nrow(train.data)) {
+  if (train.data$Age[i] <= 12) {
+    train.data$Child[i] <- 1
   } else {
-    train.data$child = 0
-  }
+    train.data$Child[i] <- 0
   }
 }
+train.data$Child <- factor(train.data$Child)
+levels(train.data$Child) <- c("Not Child", "Child")
 
-train.data["Mother"]
+train.data["Mother"] = NA
 for(i in 1:nrow(train.data)) {
-  if(train.data$Name[i] == "Mrrs" & tran.data$Parch[i] > 0) {
-    train.data$Mother = 1
+  if(train.data$Title[i] == "Mrs" & train.data$Parch[i] > 0) {
+    train.data$Mother[i] = 1
   } else {
-    train.data$Mother = 0
+    train.data$Mother[i] = 0
   }
 }
+train.data$Mother <- factor(train.data$Mother)
+levels(train.data$Mother) <- c("Not Mother", "Mother")
 
-train.data["Family"]
+train.data["Family"] = NA
 for(i in 1:nrow(train.data)) {
   x = train.data$SibSp[i]
   y = train.data$Parch[i]
-  train.data$Family = x + y + 1
+  train.data$Family[i] = x + y + 1
 }
 
-qplot(Survived, data = train.data, binwidth = 0.5)
-qplot(Sex, data = train.data, binwidth = 0.5)
-qplot(Pclass, data = train.data, binwidth = 0.5)
-qplot(Age, data = train.data, binwidth = 2)
-qplot(SibSp, data = train.data, binwidth = 0.5)
-qplot(Parch, data = train.data, binwidth = 0.5)
+## Next, we look at outliers in the data. The "Fare" variable has a mean of 32.2 and a max of 512.30. The minimum fare for the trip is 
+## 0 which could indicate that the passenger was a baby or toddler.
 
-## Dig a little deeper ##
-qplot(Survived, data = train.data) + facet_wrap(~ Sex)
-qplot(Survived, data = train.data) + facet_wrap(~ PClass)
+subset(train.data, Fare < 10) [order(subset(train.data, Fare < 10)$Fare, subset(train.data, Fare < 10)$Pclass),
+                                     c("Age", "Title", "Pclass", "Fare", "Survived")]
 
+train.data$Fare[which(train.data$Fare == 0)] <- NA
+
+impute.median.fare <- function(impute.var, filter.var, var.levels) {
+  for (v in var.levels) {
+    impute.var[which(filter.var == v)] <- impute(impute.var[which(filter.var == v)])
+  }
+  return(impute.var)
+}
+train.data$Age <- impute.median.fare(train.data$Fare, train.data$Pclass, as.numeric(levels(train.data$Pclass)))
