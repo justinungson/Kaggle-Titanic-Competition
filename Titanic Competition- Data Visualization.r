@@ -127,4 +127,5 @@ impute.median.fare <- function(impute.var, filter.var, var.levels) {
   }
   return(impute.var)
 }
-train.data$Age <- impute.median.fare(train.data$Fare, train.data$Pclass, as.numeric(levels(train.data$Pclass)))
+
+train.data$Fare <- impute.median.fare(train.data$Fare, train.data$Pclass, train.data$Pclass)
